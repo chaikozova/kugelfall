@@ -8,9 +8,9 @@ const int gelbLED = 7;
 const int servoPin = 9;
 const int button1 = 10;
 const int button2 = 11;
-const int led1 = 12;
-const int led2 = 13;
-const int fallingTime = 495;
+const int led1Green = 13;
+const int led2Yellow = 12;
+const int fallingTime = 492;
 
 
 volatile long lastPhotoTimestamp = 0;
@@ -20,6 +20,7 @@ volatile long lastHoleTime = 0;
 volatile long nextHoleTime = 0;
 volatile int velocityMode = 0;
 volatile bool isDone = false;
+volatile bool negativ = false;
 
 
 
@@ -72,6 +73,17 @@ void HallSensorISR() {
 }
 
 
+bool checkTime(int currentSpeed, int lastSpeed) {
+  if (currentSpeed - lastSpeed < 0) {
+    return true;
+  }
+  else {
+    return false;
+  }
+
+}
+
+
 void PhotoSensorISR() {
   /*
     Interrupt service routine (ISR) for the Photo sensor.
@@ -95,26 +107,49 @@ void PhotoSensorISR() {
 
   lastPhotoTimestamp = millis();
 
+
+  //too fast
+  if (currentSpeed < 500) {
+    velocityMode = 4;
+    digitalWrite(led1Green, LOW);
+    digitalWrite(led2Yellow, LOW);
+    digitalWrite(gelbLED, HIGH);
+  }
+
+  //too slow
+  if (currentSpeed > 7000) {
+    velocityMode = 5;
+    digitalWrite(led1Green, LOW);
+    digitalWrite(led2Yellow, LOW);
+    digitalWrite(gelbLED, HIGH);  // Blackbox LED Gelb
+  }
+
   //fast
-  if (currentSpeed < 1000) {
+  if (currentSpeed < 1000 && currentSpeed >= 500) {
     velocityMode = 1;
-    digitalWrite(led1, HIGH);
-    digitalWrite(led2, HIGH);
+    digitalWrite(led1Green, HIGH); //grün
+    digitalWrite(led2Yellow, HIGH); //gelb
+    digitalWrite(gelbLED, LOW);
+
   }
 
   //medium
   if (currentSpeed <= 3000 && currentSpeed >= 1000) {
     velocityMode = 2;
-    digitalWrite(led1, LOW);
-    digitalWrite(led2, HIGH);
+    digitalWrite(led1Green, LOW);
+    digitalWrite(led2Yellow, HIGH);  // nur Gelb an
+    digitalWrite(gelbLED, LOW);
+
   }
 
   //slow
-  if (currentSpeed > 3000) {
+  if (currentSpeed > 3000 && currentSpeed <= 7000) {
     velocityMode = 3;
-    digitalWrite(led1, HIGH);
-    digitalWrite(led2, LOW);
+    digitalWrite(led1Green, HIGH); //nur grün
+    digitalWrite(led2Yellow, LOW);
+    digitalWrite(gelbLED, LOW);
   }
+
 }
 
 void fireBall(int mode[], int i) {
@@ -124,21 +159,34 @@ void fireBall(int mode[], int i) {
   }
   switch (mode[i]) {
     case 1: {
-      // throw a ball
+        // throw a ball
         int t = nextHoleTime - millis() - fallingTime;
 
         if (t < 0) {
           t = t + currentSpeed;
         }
+
+        //negativ Speed
+        if (t < 0) {
+          velocityMode = 6;
+          break;
+        }
         Serial.print("Waiting for ");
         Serial.println(t);
-
         delay(t);
 
         gateOpen();
         // wait either half a turn or 500 ms, whichever comes first,
         // to close the gate
-        delay(min(currentSpeed / 2, 500));
+        if (velocityMode == 1) {
+          delay(min((currentSpeed / 2), 350));
+        } 
+        else if (velocityMode == 3) {
+          delay(min((currentSpeed / 2), 350));
+        }
+        else {
+          delay(min((currentSpeed / 2), 500));
+        }
         gateClose();
         break;
       }
@@ -166,8 +214,8 @@ void setupAll() {
   pinMode(button1, INPUT);
   pinMode(button2, INPUT);
   pinMode(gelbLED, OUTPUT);
-  pinMode(led1, OUTPUT);
-  pinMode(led2, OUTPUT);
+  pinMode(led1Green, OUTPUT);
+  pinMode(led2Yellow, OUTPUT);
 
   servo.attach(servoPin);
   gateClose();
