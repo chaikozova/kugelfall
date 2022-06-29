@@ -1,9 +1,11 @@
-#include "kugelfall_ISR.h"
+#include"kugelfall_ISR.h"
+#include <Servo.h>
 
-const int fast[] = {1, 1, 1, 0};
-const int medium[] = {1, 0, 1, 1};
-const int slow[] = {1, 0, 1, 0};
-const int wait[] = {0, 0, 0, 0};
+
+const int fast[] = {1, 1, 1, 0, 1};
+const int medium[] = {1, 0, 1, 1, 0};
+const int slow[] = {1, 1, 0, 1, 1};
+const int wait[] = {0, 0, 0, 0, 0};
 
 const int patternSelcetion[] = {wait, fast, medium, slow};
 
@@ -11,7 +13,9 @@ const int patternSelcetion[] = {wait, fast, medium, slow};
 void setup() {
   //Setup the hardware when booting the Arduino
   setupAll();
+
 }
+
 
 void loop() {
 
@@ -21,8 +25,32 @@ void loop() {
     isDone = false;
 
     int velocityModeStart = velocityMode;
+    Serial.print("velocityMode = ");
+    Serial.println(velocityMode);
 
-    for (int i = 0; i <= 4 && isDone == false; i++) {
+    if (velocityMode == 4 || velocityMode == 5 || velocityMode == 6) {
+      isDone = true;
+      switch (velocityMode) {
+        case 4: {
+            Serial.println("velocity Mode is too fast");
+            break;
+          }
+
+        case 5: {
+            Serial.println("velocityMode is too slow");
+            break;
+          }
+        case 6: {
+            Serial.print("Invalid speed detected.");
+            Serial.print("Try again in ");
+            Serial.print(currentSpeed);
+            Serial.println(" seconds");
+            delay(currentSpeed);
+          }
+      }
+    }
+
+    for (int i = 0; i <= 5 && isDone == false; i++) {
 
       if (velocityMode != velocityModeStart) {
         Serial.print("The velocity Mode has been changed.");
@@ -31,7 +59,7 @@ void loop() {
         break;
       }
 
-      switch (patternSelcetion[velocityMode]) {
+      switch (velocityMode) {
         case 0: {
             Serial.println("Waiting for velocityMode have been known.");
             break;
@@ -51,6 +79,22 @@ void loop() {
             Serial.println("velocityMode is slow");
             fireBall(patternSelcetion[velocityMode], i);
             break;
+          }
+        case 4: {
+            Serial.println("velocity Mode is too fast");
+            break;
+          }
+
+        case 5: {
+            Serial.println("velocityMode is too slow");
+            break;
+          }
+        case 6: {
+            Serial.print("Invalid speed detected.");
+            Serial.print("Try again in ");
+            Serial.print(currentSpeed);
+            Serial.println(" seconds");
+            delay(currentSpeed);
           }
       }
     }
